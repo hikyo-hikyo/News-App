@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h4>Review & Approve Article</h4>
+                </div>
+                <div class="card-body">
+                    <h5>{{ object.title }}</h5>
+                    <p><strong>Author:</strong> {{ object.author }}</p>
+                    <p><strong>Publisher:</strong> {{ object.publisher|default:"Independent" }}</p>
+                    <hr>
+                    <div class="border p-3 bg-light">
+                        {{ object.content|linebreaks }}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <button type="submit" class="btn btn-success">Approve Article</button>
+                        <a href="/" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

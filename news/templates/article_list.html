@@ -1,9 +1,0 @@
-{% extends 'base.html' %
-}
-{% for article in articles %}
-  <div class="card">
-    <h3>{{ article.title }}</h3>
-    <p>By {{ article.author }} {% if article.publisher %} | {{ article.publisher }}{% endif %}</p>
-    {% if article.approved %}<span class="badge bg-success">Approved</span>{% endif %}
-  </div>
-{% endfor %}
