@@ -6,20 +6,19 @@
     {% if articles %}
         <div class="row">
             {% for article in articles %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title">{{ article.title }}</h5>
                         <p class="card-text text-muted">
                             By <strong>{{ article.author }}</strong>
-                            {% if article.publisher %} | {{ article.publisher }}{% endif %}
+                            {% if article.publisher %} • {{ article.publisher }}{% endif %}
                         </p>
-                        <p class="card-text">{{ article.content|truncatewords:30 }}</p>
-                        
-                        <a href="{% url 'article-detail' article.pk %}" class="btn btn-primary btn-sm">Read More</a>
+                        <p class="card-text">{{ article.content|truncatewords:40 }}</p>
                     </div>
-                    <div class="card-footer text-muted">
-                        {{ article.created_at|date:"d M Y" }}
+                    <div class="card-footer bg-white border-0">
+                        
+                        <a href="{% url 'frontend-article-detail' article.pk %}" class="btn btn-primary btn-sm">Read Full Article →</a>
                     </div>
                 </div>
             </div>
@@ -27,11 +26,5 @@
         </div>
     {% else %}
         <div class="alert alert-info">No approved articles yet.</div>
-    {% endif %}
-
-    {% if user.groups.all.0.name == 'Editor' %}
-        <hr>
-        <h4>Editor Dashboard</h4>
-        <a href="/admin/" class="btn btn-warning">Go to Admin (Approve Articles)</a>
     {% endif %}
 {% endblock %}

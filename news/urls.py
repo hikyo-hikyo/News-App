@@ -1,6 +1,7 @@
 from django.urls import path, include
 from django.contrib.auth.views import LoginView, LogoutView
 from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .views import (
     ArticleViewSet, approved_webhook,
@@ -10,12 +11,14 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register(r'articles', ArticleViewSet, basename='article')
+router.register(r'articles', ArticleViewSet,
+                basename='api-article')   # Changed basename
 
 urlpatterns = [
     # Frontend
     path('', ArticleListView.as_view(), name='home'),
-    path('article/<int:pk>/', ArticleDetailView.as_view(), name='article-detail'),
+    path('article/<int:pk>/', ArticleDetailView.as_view(),
+         name='frontend-article-detail'),
     path('approve/<int:pk>/', ApproveArticleView.as_view(), name='approve-article'),
     path('article/create/', ArticleCreateView.as_view(), name='article-create'),
     path('newsletter/create/', NewsletterCreateView.as_view(),
@@ -27,6 +30,8 @@ urlpatterns = [
     path('register/', register_view, name='register'),
 
     # API
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/', include(router.urls)),
     path('api/articles/subscribed/',
          ArticleViewSet.as_view({'get': 'subscribed'}), name='subscribed-articles'),

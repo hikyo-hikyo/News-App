@@ -66,6 +66,9 @@ class ArticleDetailView(DetailView):
     template_name = 'news/article_detail.html'
     context_object_name = 'article'
 
+    def get_queryset(self):
+        return Article.objects.filter(approved=True)
+
 
 class ArticleCreateView(LoginRequiredMixin, CreateView):
     model = Article
@@ -97,22 +100,33 @@ class ArticleViewSet(viewsets.ModelViewSet):
     serializer_class = ArticleSerializer
 
     def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]          # Public read
         if self.action == 'create':
             return [IsJournalist()]
         if self.action in ['update', 'partial_update', 'destroy']:
-            return [IsEditor() | IsJournalist()]
+            return [IsEditorOrJournalist()]
         return [permissions.IsAuthenticated()]
 
-    @action(detail=False, methods=['get'])
-    def subscribed(self, request):
-        user = request.user
-        qs = Article.objects.filter(approved=True)
 
-        if user.groups.filter(name='Reader').exists():
-            qs = qs.filter(
-                Q(publisher__in=user.subscriptions_publishers.all()) |
-                Q(author__in=user.subscriptions_journalists.all())
-            )
+class IsJournalist(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.groups.filter(name='Journalist').exists()
 
-        serializer = ArticleSerializer(qs, many=True)
-        return Response(serializer.data)
+
+class IsEditor(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.groups.filter(name='Editor').exists()
+# Add this new permission class at the top of the file (after imports)
+
+
+class IsEditorOrJournalist(permissions.BasePermission):
+    """Custom permission: Allow if user is Editor OR Journalist"""
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return (
+            request.user.groups.filter(name='Editor').exists() or
+            request.user.groups.filter(name='Journalist').exists()
+        )
