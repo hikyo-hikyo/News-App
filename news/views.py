@@ -1,35 +1,34 @@
+# news/views.py
 from django.views.generic import ListView, UpdateView, DetailView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.urls import reverse_lazy
+from django.shortcuts import render, redirect
+from django.db.models import Q
+
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
-from django.db.models import Q
-from django.urls import reverse_lazy
-from django.shortcuts import render, redirect
-from .forms import CustomUserCreationForm
 
-# Import all models
-from .models import Article, Newsletter   # ← Newsletter added here
-
-from .serializers import ArticleSerializer
-from .permissions import IsJournalist, IsEditor
-from .forms import ArticleForm, NewsletterForm
-
-# REGISTER
+from .models import Article, Newsletter, Publisher, User
+from .forms import CustomUserCreationForm, ArticleForm, NewsletterForm
+from .serializers import ArticleSerializer, NewsletterSerializer
+from .permissions import IsJournalist, IsEditor, IsEditorOrJournalist
 
 
+# REGISTER VIEW
 def register_view(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            form.save()
+            user = form.save()
+            # You can add group assignment logic here if needed
             return redirect('login')
     else:
         form = CustomUserCreationForm()
     return render(request, 'registration/register.html', {'form': form})
+
+
 # WEBHOOK
-
-
 @api_view(['POST'])
 def approved_webhook(request):
     print("EXTERNAL WEBHOOK RECEIVED:")
@@ -48,7 +47,7 @@ class ApproveArticleView(LoginRequiredMixin, EditorRequiredMixin, UpdateView):
     model = Article
     fields = ['approved']
     template_name = 'news/approve_article.html'
-    success_url = '/'
+    success_url = reverse_lazy('home')
 
 
 class ArticleListView(ListView):
@@ -94,39 +93,54 @@ class NewsletterCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy('home')
 
 
-# REST API
+# REST API VIEWS
 class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
     serializer_class = ArticleSerializer
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [permissions.AllowAny()]          # Public read
+        if self.action in ['list', 'retrieve', 'subscribed']:
+            return [permissions.IsAuthenticated()]
         if self.action == 'create':
             return [IsJournalist()]
         if self.action in ['update', 'partial_update', 'destroy']:
             return [IsEditorOrJournalist()]
         return [permissions.IsAuthenticated()]
 
+    def get_queryset(self):
+        queryset = Article.objects.filter(approved=True)
+        user = self.request.user
 
-class IsJournalist(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.groups.filter(name='Journalist').exists()
+        if self.action == 'subscribed' and user.is_authenticated:
+            subscribed_publishers = user.subscriptions_publishers.all()
+            subscribed_journalists = user.subscriptions_journalists.all()
+
+            queryset = queryset.filter(
+                Q(publisher__in=subscribed_publishers) |
+                Q(author__in=subscribed_journalists)
+            )
+        return queryset
+
+    @action(detail=False, methods=['get'], url_path='subscribed')
+    def subscribed(self, request):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def perform_create(self, serializer):
+        """Automatically set the author to the logged-in journalist"""
+        serializer.save(author=self.request.user)
 
 
-class IsEditor(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.groups.filter(name='Editor').exists()
-# Add this new permission class at the top of the file (after imports)
+class NewsletterViewSet(viewsets.ModelViewSet):
+    queryset = Newsletter.objects.all()
+    serializer_class = NewsletterSerializer
 
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated()]
+        # Create, Update, Delete only for Journalists & Editors
+        return [IsEditorOrJournalist()]
 
-class IsEditorOrJournalist(permissions.BasePermission):
-    """Custom permission: Allow if user is Editor OR Journalist"""
-
-    def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        return (
-            request.user.groups.filter(name='Editor').exists() or
-            request.user.groups.filter(name='Journalist').exists()
-        )
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)

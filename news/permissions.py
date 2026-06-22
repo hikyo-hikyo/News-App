@@ -11,6 +11,11 @@ class IsEditor(permissions.BasePermission):
         return request.user.groups.filter(name='Editor').exists()
 
 
-class IsReader(permissions.BasePermission):
+class IsEditorOrJournalist(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.groups.filter(name='Reader').exists()
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return (
+            request.user.groups.filter(name='Editor').exists() or
+            request.user.groups.filter(name='Journalist').exists()
+        )
