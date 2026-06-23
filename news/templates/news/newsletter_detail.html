@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ newsletter.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h3>{{ newsletter.title }}</h3>
+            <p class="mb-0">By {{ newsletter.author.username }} • {{ newsletter.created_at|date:"F d, Y" }}</p>
+        </div>
+        <div class="card-body">
+            <p><strong>Description:</strong> {{ newsletter.description }}</p>
+            
+            <h5 class="mt-4">Articles in this Newsletter:</h5>
+            <ul class="list-group">
+                {% for article in newsletter.articles.all %}
+                <li class="list-group-item">
+                    <a href="{% url 'frontend-article-detail' article.pk %}">
+                        {{ article.title }}
+                    </a>
+                    <small class="text-muted"> - {{ article.created_at|date:"M d" }}</small>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-muted">No articles yet.</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="card-footer">
+            <a href="{% url 'newsletter_list' %}" class="btn btn-secondary">← Back to Newsletters</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,3 +1,5 @@
+{% load group_tags %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,17 +15,26 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="/">NewsApp</a>
-            
+            <a class="navbar-brand" href="{% url 'home' %}">NewsApp</a>
+
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
+
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'article-create' %}">Create Article</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'newsletter-create' %}">Create Newsletter</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'newsletter_list' %}">Newsletters</a></li>
+
+                    
+                    {% if user.is_authenticated %}
+                         {% if user|has_group:"Journalist" or user|has_group:"Editor" %}
+                            <li class="nav-item"><a class="nav-link" href="{% url 'article-create' %}">Create Article</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'newsletter-create' %}">Create Newsletter</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'editor-article-list' %}">Manage Articles</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'editor-newsletter-list' %}">Manage Newsletters</a></li>
+                        {% endif %}
+                    {% endif %}
                 </ul>
 
                 <ul class="navbar-nav">
@@ -31,21 +42,23 @@
                         <li class="nav-item">
                             <span class="nav-link">
                                 Hello, <strong>{{ user.username }}</strong> 
-                                ({{ user.groups.first|default:"No Role" }})
+                                <small>({{ user.groups.first|default:"Reader" }})</small>
                             </span>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link btn btn-outline-light btn-sm ms-2" 
-                               href="{% url 'logout' %}">Logout</a>
+                            <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-light btn-sm ms-2">
+                                    Logout
+                                </button>
+                            </form>
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link btn btn-outline-light btn-sm" 
-                               href="{% url 'login' %}">Login</a>
+                            <a class="nav-link btn btn-outline-light btn-sm" href="{% url 'login' %}">Login</a>
                         </li>
                         <li class="nav-item ms-2">
-                            <a class="nav-link btn btn-primary btn-sm" 
-                               href="{% url 'register' %}">Register</a>
+                            <a class="nav-link btn btn-primary btn-sm" href="{% url 'register' %}">Register</a>
                         </li>
                     {% endif %}
                 </ul>

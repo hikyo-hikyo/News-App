@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Newsletters{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Newsletters</h2>
+    
+    {% if newsletters %}
+        <div class="row">
+            {% for newsletter in newsletters %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ newsletter.title }}</h5>
+                        <p class="card-text text-muted">
+                            By <strong>{{ newsletter.author.username }}</strong> 
+                            • {{ newsletter.created_at|date:"M d, Y" }}
+                        </p>
+                        <p class="card-text">{{ newsletter.description|truncatewords:40 }}</p>
+                        
+                      
+                        <a href="{% url 'newsletter_detail' newsletter.pk %}" 
+                           class="btn btn-primary">
+                            Read Newsletter →
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No newsletters available yet.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

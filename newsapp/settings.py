@@ -21,7 +21,12 @@ INSTALLED_APPS = [
     'news',
     'rest_framework',
     'rest_framework_simplejwt',
+    'crispy_forms',
+    'crispy_bootstrap5',
 ]
+
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 
 AUTH_USER_MODEL = 'news.User'   # ← MUST be before migrations
 

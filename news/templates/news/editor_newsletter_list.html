@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Newsletters{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Manage Newsletters</h2>
+    <a href="{% url 'newsletter-create' %}" class="btn btn-success mb-3">+ New Newsletter</a>
+
+    <div class="row">
+        {% for newsletter in newsletters %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ newsletter.title }}</h5>
+                    <p class="text-muted">By {{ newsletter.author.username }}</p>
+                    <p>{{ newsletter.description|truncatewords:25 }}</p>
+                    <p><strong>Articles:</strong> {{ newsletter.articles.count }}</p>
+                    
+                    <a href="{% url 'newsletter-update' newsletter.pk %}" class="btn btn-warning">
+                        Edit / Manage Articles
+                    </a>
+                    
+                    <a href="{% url 'newsletter-delete' newsletter.pk %}" class="btn btn-danger">
+                        Delete
+                    </a>
+                    
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p>No newsletters yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

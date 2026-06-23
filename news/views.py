@@ -1,5 +1,7 @@
-# news/views.py
-from django.views.generic import ListView, UpdateView, DetailView, CreateView
+
+from django.views.generic import (
+    ListView, UpdateView, DetailView, CreateView, DeleteView
+)
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.shortcuts import render, redirect
@@ -15,13 +17,12 @@ from .serializers import ArticleSerializer, NewsletterSerializer
 from .permissions import IsJournalist, IsEditor, IsEditorOrJournalist
 
 
-# REGISTER VIEW
+#  REGISTER
 def register_view(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            # You can add group assignment logic here if needed
+            form.save()
             return redirect('login')
     else:
         form = CustomUserCreationForm()
@@ -43,11 +44,48 @@ class EditorRequiredMixin(UserPassesTestMixin):
 
 
 # FRONTEND VIEWS
+class NewsletterListView(ListView):
+    model = Newsletter
+    template_name = 'news/newsletter_list.html'
+    context_object_name = 'newsletters'
+    ordering = ['-created_at']
+
+
+class NewsletterDetailView(DetailView):
+    model = Newsletter
+    template_name = 'news/newsletter_detail.html'
+    context_object_name = 'newsletter'
+
+
 class ApproveArticleView(LoginRequiredMixin, EditorRequiredMixin, UpdateView):
     model = Article
     fields = ['approved']
     template_name = 'news/approve_article.html'
     success_url = reverse_lazy('home')
+
+
+class EditorArticleListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    model = Article
+    template_name = 'news/editor_article_list.html'
+    context_object_name = 'articles'
+    ordering = ['-created_at']
+
+    def test_func(self):
+        return self.request.user.groups.filter(name__in=['Editor', 'Journalist']).exists()
+
+    def get_queryset(self):
+        # Show ALL articles (including unapproved)
+        return Article.objects.all()
+
+
+class EditorNewsletterListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    model = Newsletter
+    template_name = 'news/editor_newsletter_list.html'
+    context_object_name = 'newsletters'
+    ordering = ['-created_at']
+
+    def test_func(self):
+        return self.request.user.groups.filter(name__in=['Editor', 'Journalist']).exists()
 
 
 class ArticleListView(ListView):
@@ -69,31 +107,95 @@ class ArticleDetailView(DetailView):
         return Article.objects.filter(approved=True)
 
 
-class ArticleCreateView(LoginRequiredMixin, CreateView):
+class ArticleCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = Article
     form_class = ArticleForm
     template_name = 'news/article_form.html'
-    success_url = reverse_lazy('home')
+    success_url = reverse_lazy('editor-article-list')
+
+    def test_func(self):
+        return self.request.user.groups.filter(name__in=['Journalist', 'Editor']).exists()
 
     def form_valid(self, form):
         form.instance.author = self.request.user
         form.instance.approved = False
         return super().form_valid(form)
 
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
 
-
-class NewsletterCreateView(LoginRequiredMixin, CreateView):
+class NewsletterCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = Newsletter
     form_class = NewsletterForm
     template_name = 'news/newsletter_form.html'
+    success_url = reverse_lazy('editor-newsletter-list')
+
+    def test_func(self):
+        return self.request.user.groups.filter(name__in=['Journalist', 'Editor']).exists()
+
+    def form_valid(self, form):
+        newsletter = form.save(commit=False)
+        newsletter.author = self.request.user
+        newsletter.save()
+        form.save_m2m()                    # This saves the selected articles
+        return super().form_valid(form)
+
+
+class ArticleUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Article
+    form_class = ArticleForm
+    template_name = 'news/article_update.html'
+    success_url = reverse_lazy('editor-article-list')
+
+    def test_func(self):
+        article = self.get_object()
+        return (
+            self.request.user.groups.filter(name='Editor').exists() or
+            article.author == self.request.user
+        )
+
+    def form_valid(self, form):
+        return super().form_valid(form)
+
+
+class NewsletterUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Newsletter
+    form_class = NewsletterForm
+    template_name = 'news/newsletter_update.html'
+    success_url = reverse_lazy('editor-newsletter-list')
+
+    def test_func(self):
+        newsletter = self.get_object()
+        return (
+            self.request.user.groups.filter(name='Editor').exists() or
+            newsletter.author == self.request.user
+        )
+
+    def form_valid(self, form):
+        newsletter = form.save(commit=False)
+        newsletter.author = self.get_object().author
+        newsletter.save()
+        form.save_m2m()                    # Critical for ManyToMany
+        return super().form_valid(form)
+
+
+class ArticleDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Article
+    template_name = 'news/article_confirm_delete.html'
     success_url = reverse_lazy('home')
 
+    def test_func(self):
+        return self.request.user.groups.filter(name='Editor').exists()
 
-# REST API VIEWS
+
+class NewsletterDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Newsletter
+    template_name = 'news/newsletter_confirm_delete.html'
+    success_url = reverse_lazy('newsletter_list')
+
+    def test_func(self):
+        return self.request.user.groups.filter(name='Editor').exists()
+
+
+# REST API
 class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
     serializer_class = ArticleSerializer
@@ -114,7 +216,6 @@ class ArticleViewSet(viewsets.ModelViewSet):
         if self.action == 'subscribed' and user.is_authenticated:
             subscribed_publishers = user.subscriptions_publishers.all()
             subscribed_journalists = user.subscriptions_journalists.all()
-
             queryset = queryset.filter(
                 Q(publisher__in=subscribed_publishers) |
                 Q(author__in=subscribed_journalists)
@@ -128,7 +229,6 @@ class ArticleViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def perform_create(self, serializer):
-        """Automatically set the author to the logged-in journalist"""
         serializer.save(author=self.request.user)
 
 
@@ -139,7 +239,6 @@ class NewsletterViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.IsAuthenticated()]
-        # Create, Update, Delete only for Journalists & Editors
         return [IsEditorOrJournalist()]
 
     def perform_create(self, serializer):

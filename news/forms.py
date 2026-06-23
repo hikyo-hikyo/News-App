@@ -68,20 +68,21 @@ class ArticleApprovalForm(forms.ModelForm):
 # ====================== NEWSLETTER FORMS ======================
 class NewsletterForm(forms.ModelForm):
     articles = forms.ModelMultipleChoiceField(
-        queryset=Article.objects.filter(approved=True),
+        queryset=Article.objects.all().order_by('-created_at'),
         widget=forms.CheckboxSelectMultiple(
             attrs={'class': 'form-check-input'}),
-        required=True,
-        label="Select Approved Articles"
+        required=False,
+        label="Select Articles"
     )
 
     class Meta:
-        model = Newsletter          # ← Now properly imported
+        model = Newsletter
         fields = ['title', 'description', 'articles']
-        widgets = {
-            'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
-        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make checkboxes look better
+        self.fields['articles'].help_text = "Hold Ctrl/Cmd to select multiple articles"
 
 
 # ====================== SUBSCRIPTION FORMS ======================
