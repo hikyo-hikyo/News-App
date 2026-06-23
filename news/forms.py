@@ -79,11 +79,6 @@ class NewsletterForm(forms.ModelForm):
         model = Newsletter
         fields = ['title', 'description', 'articles']
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Make checkboxes look better
-        self.fields['articles'].help_text = "Hold Ctrl/Cmd to select multiple articles"
-
 
 # ====================== SUBSCRIPTION FORMS ======================
 class PublisherSubscriptionForm(forms.Form):

@@ -122,23 +122,6 @@ class ArticleCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         return super().form_valid(form)
 
 
-class NewsletterCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
-    model = Newsletter
-    form_class = NewsletterForm
-    template_name = 'news/newsletter_form.html'
-    success_url = reverse_lazy('editor-newsletter-list')
-
-    def test_func(self):
-        return self.request.user.groups.filter(name__in=['Journalist', 'Editor']).exists()
-
-    def form_valid(self, form):
-        newsletter = form.save(commit=False)
-        newsletter.author = self.request.user
-        newsletter.save()
-        form.save_m2m()                    # This saves the selected articles
-        return super().form_valid(form)
-
-
 class ArticleUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Article
     form_class = ArticleForm
@@ -153,6 +136,23 @@ class ArticleUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         )
 
     def form_valid(self, form):
+        return super().form_valid(form)
+
+
+class NewsletterCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    model = Newsletter
+    form_class = NewsletterForm
+    template_name = 'news/newsletter_form.html'
+    success_url = reverse_lazy('editor-newsletter-list')
+
+    def test_func(self):
+        return self.request.user.groups.filter(name__in=['Journalist', 'Editor']).exists()
+
+    def form_valid(self, form):
+        newsletter = form.save(commit=False)
+        newsletter.author = self.request.user
+        newsletter.save()
+        form.save_m2m()                    # Important for articles
         return super().form_valid(form)
 
 
@@ -173,7 +173,7 @@ class NewsletterUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         newsletter = form.save(commit=False)
         newsletter.author = self.get_object().author
         newsletter.save()
-        form.save_m2m()                    # Critical for ManyToMany
+        form.save_m2m()                    # Important for articles
         return super().form_valid(form)
 
 

@@ -1,26 +1,32 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
 
-{% block title %}Update Newsletter{% endblock %}
+{% block title %}Create Newsletter{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-lg-10">
             <div class="card shadow">
-                <div class="card-header bg-warning text-dark">
-                    <h3>Update Newsletter</h3>
+                <div class="card-header bg-primary text-white">
+                    <h3>Create New Newsletter</h3>
                 </div>
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
-                        
-                        {{ form.title|crispy }}
-                        {{ form.description|crispy }}
 
                         
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Newsletter Title</label>
+                            {{ form.title }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Description</label>
+                            {{ form.description }}
+                        </div>
+
                         <div class="mt-4">
-                            <label class="form-label fw-bold">Select Articles for this Newsletter</label>
+                            <label class="form-label fw-bold">Select Articles to Include</label>
                             <div class="border p-4 bg-light rounded" style="max-height: 420px; overflow-y: auto;">
                                 <div class="row">
                                     {% for article_field in form.articles %}
@@ -36,12 +42,8 @@
                         </div>
 
                         <div class="mt-4">
-                            <button type="submit" class="btn btn-warning btn-lg">
-                                Update Newsletter
-                            </button>
-                            <a href="{% url 'editor-newsletter-list' %}" class="btn btn-secondary btn-lg">
-                                Cancel
-                            </a>
+                            <button type="submit" class="btn btn-success btn-lg">Update Newsletter</button>
+                            <a href="{% url 'editor-newsletter-list' %}" class="btn btn-secondary btn-lg">Cancel</a>
                         </div>
                     </form>
                 </div>

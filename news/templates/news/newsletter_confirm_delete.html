@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Newsletter{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4>Confirm Deletion</h4>
+                </div>
+                <div class="card-body">
+                    <h5>Are you sure you want to delete this newsletter?</h5>
+                    <p class="text-danger fw-bold">"{{ object.title }}"</p>
+                    <p>This action cannot be undone.</p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-lg">Yes, Delete Newsletter</button>
+                        <a href="{% url 'editor-newsletter-list' %}" class="btn btn-secondary btn-lg">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
