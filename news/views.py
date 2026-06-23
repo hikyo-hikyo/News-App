@@ -152,7 +152,7 @@ class NewsletterCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         newsletter = form.save(commit=False)
         newsletter.author = self.request.user
         newsletter.save()
-        form.save_m2m()                    # Important for articles
+        form.save_m2m()
         return super().form_valid(form)
 
 
@@ -173,8 +173,63 @@ class NewsletterUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         newsletter = form.save(commit=False)
         newsletter.author = self.get_object().author
         newsletter.save()
-        form.save_m2m()                    # Important for articles
+        form.save_m2m()
         return super().form_valid(form)
+
+
+# Test versions, django was suppressing an error where my forms required title and description even when not used.
+"""class NewsletterCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    model = Newsletter
+    form_class = NewsletterForm
+    template_name = 'news/newsletter_form.html'
+    success_url = reverse_lazy('editor-newsletter-list')
+
+    def test_func(self):
+        return self.request.user.groups.filter(name__in=['Journalist', 'Editor']).exists()
+
+    def form_invalid(self, form):
+        print("=== FORM INVALID ===")
+        print("Errors:", form.errors)
+        print("Cleaned Data:", form.cleaned_data)
+        return super().form_invalid(form)
+
+    def form_valid(self, form):
+        print("=== FORM VALID - SAVING ===")
+        newsletter = form.save(commit=False)
+        newsletter.author = self.request.user
+        newsletter.save()
+        form.save_m2m()
+        print("Newsletter created successfully with ID:", newsletter.id)
+        return super().form_valid(form)
+
+
+class NewsletterUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Newsletter
+    form_class = NewsletterForm
+    template_name = 'news/newsletter_update.html'
+    success_url = reverse_lazy('editor-newsletter-list')
+
+    def test_func(self):
+        newsletter = self.get_object()
+        return (
+            self.request.user.groups.filter(name='Editor').exists() or
+            newsletter.author == self.request.user
+        )
+
+    def form_invalid(self, form):
+        print("=== UPDATE FORM INVALID ===")
+        print("Errors:", form.errors)
+        print("Cleaned Data:", form.cleaned_data)
+        return super().form_invalid(form)
+
+    def form_valid(self, form):
+        print("=== UPDATE FORM VALID - SAVING ===")
+        newsletter = form.save(commit=False)
+        newsletter.author = self.get_object().author
+        newsletter.save()
+        form.save_m2m()
+        print("Newsletter updated successfully with ID:", newsletter.id)
+        return super().form_valid(form)"""
 
 
 class ArticleDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
