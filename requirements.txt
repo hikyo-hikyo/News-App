@@ -1,0 +1,7 @@
+Django==6.0.6
+djangorestframework==3.17.1
+djangorestframework_simplejwt==5.5.1
+Requests==2.34.2
+crispy-bootstrap5==2026.3
+decorator==5.3.1
+pillow==12.2.0
