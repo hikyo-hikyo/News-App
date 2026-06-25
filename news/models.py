@@ -4,8 +4,12 @@ from django.utils import timezone
 
 
 class User(AbstractUser):
+
+    email = models.EmailField(unique=True)  # Unique email
+
     subscriptions_publishers = models.ManyToManyField(
         'Publisher', blank=True, related_name='subscribers')
+
     subscriptions_journalists = models.ManyToManyField('User', blank=True,
                                                        related_name='journalist_subscribers',
                                                        limit_choices_to={'groups__name': 'Journalist'})

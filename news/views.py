@@ -15,6 +15,7 @@ from .models import Article, Newsletter, Publisher, User
 from .forms import CustomUserCreationForm, ArticleForm, NewsletterForm
 from .serializers import ArticleSerializer, NewsletterSerializer
 from .permissions import IsJournalist, IsEditor, IsEditorOrJournalist
+from django.contrib.auth import login
 
 
 #  REGISTER
@@ -22,8 +23,9 @@ def register_view(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            form.save()
-            return redirect('login')
+            user = form.save()
+            login(request, user)
+            return redirect('home')
     else:
         form = CustomUserCreationForm()
     return render(request, 'registration/register.html', {'form': form})

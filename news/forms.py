@@ -1,9 +1,8 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-# ← All models imported here
 from .models import Article, Newsletter, User, Publisher
-
-# ====================== USER REGISTRATION ======================
+from django.contrib.auth.models import Group
+# USER REGISTRATION
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -22,21 +21,30 @@ class CustomUserCreationForm(UserCreationForm):
         model = User
         fields = ['username', 'email', 'password1', 'password2', 'role']
 
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError(
+                "A user with this email already exists.")
+        return email
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data['email']
+
         if commit:
             user.save()
-            from django.contrib.auth.models import Group
-            try:
-                group = Group.objects.get(name=self.cleaned_data['role'])
+
+            # Assign the correct group
+            role = self.cleaned_data.get('role')
+            if role:
+                group, _ = Group.objects.get_or_create(name=role)
                 user.groups.add(group)
-            except Group.DoesNotExist:
-                pass  # Group will be created later in admin
+
         return user
 
 
-# ====================== ARTICLE FORMS ======================
+# ARTICLE FORMS
 class ArticleForm(forms.ModelForm):
     class Meta:
         model = Article
@@ -65,7 +73,7 @@ class ArticleApprovalForm(forms.ModelForm):
         }
 
 
-# ====================== NEWSLETTER FORMS ======================
+# NEWSLETTER FORMS
 class NewsletterForm(forms.ModelForm):
     articles = forms.ModelMultipleChoiceField(
         queryset=Article.objects.all().order_by('-created_at'),
@@ -80,7 +88,7 @@ class NewsletterForm(forms.ModelForm):
         fields = ['title', 'description', 'articles']
 
 
-# ====================== SUBSCRIPTION FORMS ======================
+# SUBSCRIPTION FORMS
 class PublisherSubscriptionForm(forms.Form):
     publishers = forms.ModelMultipleChoiceField(
         queryset=Publisher.objects.all(),
