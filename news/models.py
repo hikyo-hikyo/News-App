@@ -4,6 +4,17 @@ from django.utils import timezone
 
 
 class User(AbstractUser):
+    username = models.CharField(
+        ("username"),
+        max_length=15,                    # Changed from 150 to 15
+        unique=True,
+        help_text=(
+            "Required. 15 characters or fewer. Letters, digits and @/./+/-/_ only."),
+        validators=[AbstractUser.username_validator],
+        error_messages={
+            "unique": ("A user with that username already exists."),
+        },
+    )
 
     email = models.EmailField(unique=True)  # Unique email
 
@@ -19,7 +30,7 @@ class User(AbstractUser):
 
 
 class Publisher(models.Model):
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=20)
     description = models.TextField(blank=True)
 
     def __str__(self):
