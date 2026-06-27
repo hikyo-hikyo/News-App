@@ -48,20 +48,19 @@ class CustomUserCreationForm(UserCreationForm):
 class ArticleForm(forms.ModelForm):
     class Meta:
         model = Article
+        # Make sure publisher is included
         fields = ['title', 'content', 'publisher']
-        widgets = {
-            'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
-            'publisher': forms.Select(attrs={'class': 'form-select'}),
-        }
 
     def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        if self.user and self.user.groups.filter(name='Journalist').exists():
-            self.fields['publisher'].queryset = Publisher.objects.all()
-        else:
-            self.fields['publisher'].queryset = Publisher.objects.none()
+
+        # This ensures all publishers appear in the dropdown
+        self.fields['publisher'].queryset = Publisher.objects.all()
+        # Allow independent articles (no publisher)
+        self.fields['publisher'].required = False
+
+        # Optional: Make it look nicer
+        self.fields['publisher'].empty_label = "No Publisher (Independent Article)"
 
 
 class ArticleApprovalForm(forms.ModelForm):

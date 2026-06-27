@@ -28,15 +28,17 @@
 
                     
                     {% if user.is_authenticated %}
-                         {% if user|has_group:"Journalist" or user|has_group:"Editor" %}
+                         {% if user|has_group:"Journalist"%}
                             <li class="nav-item"><a class="nav-link" href="{% url 'article-create' %}">Create Article</a></li>
                             <li class="nav-item"><a class="nav-link" href="{% url 'newsletter-create' %}">Create Newsletter</a></li>
                             <li class="nav-item"><a class="nav-link" href="{% url 'editor-article-list' %}">Manage Articles</a></li>
                             <li class="nav-item"><a class="nav-link" href="{% url 'editor-newsletter-list' %}">Manage Newsletters</a></li>
-                            {% if user|has_group:"Editor" %}
+                        {% endif %}
+                        {% if user|has_group:"Editor" %}
+                            <li class="nav-item"><a class="nav-link" href="{% url 'editor-article-list' %}">Manage Articles</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'editor-newsletter-list' %}">Manage Newsletters</a></li>
                             <li class="nav-item"><a class="nav-link" href="{% url 'publisher-list' %}">Publishers</a></li>
                             <li class="nav-item"><a class="nav-link" href="{% url 'publisher-create' %}">Create Publisher</a></li>
-                            {% endif %}
                         {% endif %}
                     {% endif %}
                 </ul>

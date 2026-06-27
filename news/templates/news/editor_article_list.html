@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
-
+{% load group_tags %}
 {% block title %}Manage Articles{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <h2>Manage Articles (All Statuses)</h2>
-    <a href="{% url 'article-create' %}" class="btn btn-success mb-3">+ New Article</a>
-
+    {% if user|has_group:"Journalist" %}
+     <a href="{% url 'article-create' %}" class="btn btn-success mb-3">+ New Article</a>
+    {% endif %}
     <table class="table table-hover">
         <thead class="table-dark">
             <tr>
@@ -33,12 +34,12 @@
                 </td>
                 <td>{{ article.created_at|date:"M d, Y" }}</td>
                 <td>
-                    {% if not article.approved %}
-                        <a href="{% url 'approve-article' article.pk %}" class="btn btn-success">Approve</a>
-                    {% endif %}
                     <a href="{% url 'article-update' article.pk %}" class="btn btn-sm btn-warning">Edit</a>
                    
                     <a href="{% url 'article-delete' article.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                    {% if not article.approved %}
+                        <a href="{% url 'approve-article' article.pk %}" class="btn btn-sm btn-success">Approve</a>
+                    {% endif %}
 
                 </td>
             </tr>
