@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Publishers</h2>
+<a href="{% url 'publisher-create' %}" class="btn btn-primary">Create New Publisher</a>
+
+<ul>
+{% for publisher in publishers %}
+    <li>
+        <strong>{{ publisher.name }}</strong> - {{ publisher.description|truncatewords:20 }}
+        {% if publisher in request.user.subscriptions_publishers.all %}
+            <a href="{% url 'unsubscribe-publisher' publisher.pk %}" class="btn btn-danger btn-sm">Unsubscribe</a>
+        {% else %}
+            <a href="{% url 'subscribe-publisher' publisher.pk %}" class="btn btn-success btn-sm">Subscribe</a>
+        {% endif %}
+    </li>
+{% endfor %}
+</ul>
+{% endblock %}

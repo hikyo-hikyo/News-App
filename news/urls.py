@@ -11,7 +11,8 @@ from .views import (
     ApproveArticleView,
     EditorArticleListView, EditorNewsletterListView,
     ArticleUpdateView, NewsletterUpdateView,
-    ArticleDeleteView, NewsletterDeleteView,
+    ArticleDeleteView, NewsletterDeleteView, PublisherListView,
+    PublisherCreateView, subscribe_publisher, unsubscribe_publisher, subscribe_journalist, unsubscribe_journalist,
 
     # Other
     register_view, approved_webhook,
@@ -64,4 +65,20 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/', include(router.urls)),
     path('api/approved/', approved_webhook, name='approved-webhook'),
+
+    # Publishers
+    path('publishers/', PublisherListView.as_view(), name='publisher-list'),
+    path('publishers/create/', PublisherCreateView.as_view(),
+         name='publisher-create'),
+
+    # Subscriptions
+    path('subscribe/publisher/<int:pk>/',
+         subscribe_publisher, name='subscribe-publisher'),
+    path('unsubscribe/publisher/<int:pk>/',
+         unsubscribe_publisher, name='unsubscribe-publisher'),
+
+    path('subscribe/journalist/<int:pk>/',
+         subscribe_journalist, name='subscribe-journalist'),
+    path('unsubscribe/journalist/<int:pk>/',
+         unsubscribe_journalist, name='unsubscribe-journalist'),
 ]

@@ -32,3 +32,27 @@ def handle_article_approval(sender, instance, created, **kwargs):
                           timeout=5)
         except:
             pass  # Don't break if localhost fails in production
+
+
+@receiver(post_save, sender=Article)
+def notify_subscribers_on_approval(sender, instance, **kwargs):
+    # only on update to approved
+    if instance.approved and kwargs.get('created', False) is False:
+        # Notify publisher subscribers
+        if instance.publisher:
+            for reader in instance.publisher.subscribers.all():
+                send_mail(
+                    subject=f"New Article from {instance.publisher.name}",
+                    message=f"{instance.title}\n\n{instance.content[:500]}...",
+                    from_email='no-reply@newsapp.com',
+                    recipient_list=[reader.email],
+                )
+
+        # Notify journalist subscribers
+        for reader in instance.author.journalist_subscribers.all():
+            send_mail(
+                subject=f"New Article by {instance.author.username}",
+                message=f"{instance.title}\n\n{instance.content[:500]}...",
+                from_email='no-reply@newsapp.com',
+                recipient_list=[reader.email],
+            )

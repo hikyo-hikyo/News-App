@@ -6,19 +6,23 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.shortcuts import render, redirect
 from django.db.models import Q
-
+from django.contrib import messages
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
-
 from .models import Article, Newsletter, Publisher, User
 from .forms import CustomUserCreationForm, ArticleForm, NewsletterForm
 from .serializers import ArticleSerializer, NewsletterSerializer
 from .permissions import IsJournalist, IsEditor, IsEditorOrJournalist
 from django.contrib.auth import login
-
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect
+from django.views.generic import ListView, CreateView
+from .models import Publisher
 
 #  REGISTER
+
+
 def register_view(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
@@ -63,7 +67,12 @@ class ApproveArticleView(LoginRequiredMixin, EditorRequiredMixin, UpdateView):
     model = Article
     fields = ['approved']
     template_name = 'news/approve_article.html'
-    success_url = reverse_lazy('home')
+    success_url = reverse_lazy('editor-article-list')
+
+    def form_valid(self, form):
+        form.instance.approved = True
+        response = super().form_valid(form)
+        return response
 
 
 class EditorArticleListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
@@ -116,7 +125,7 @@ class ArticleCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     success_url = reverse_lazy('editor-article-list')
 
     def test_func(self):
-        return self.request.user.groups.filter(name__in=['Journalist', 'Editor']).exists()
+        return self.request.user.groups.filter(name='Journalist').exists()
 
     def form_valid(self, form):
         form.instance.author = self.request.user
@@ -148,7 +157,7 @@ class NewsletterCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     success_url = reverse_lazy('editor-newsletter-list')
 
     def test_func(self):
-        return self.request.user.groups.filter(name__in=['Journalist', 'Editor']).exists()
+        return self.request.user.groups.filter(name='Journalist').exists()
 
     def form_valid(self, form):
         newsletter = form.save(commit=False)
@@ -177,61 +186,6 @@ class NewsletterUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         newsletter.save()
         form.save_m2m()
         return super().form_valid(form)
-
-
-# Test versions, django was suppressing an error where my forms required title and description even when not used.
-"""class NewsletterCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
-    model = Newsletter
-    form_class = NewsletterForm
-    template_name = 'news/newsletter_form.html'
-    success_url = reverse_lazy('editor-newsletter-list')
-
-    def test_func(self):
-        return self.request.user.groups.filter(name__in=['Journalist', 'Editor']).exists()
-
-    def form_invalid(self, form):
-        print("=== FORM INVALID ===")
-        print("Errors:", form.errors)
-        print("Cleaned Data:", form.cleaned_data)
-        return super().form_invalid(form)
-
-    def form_valid(self, form):
-        print("=== FORM VALID - SAVING ===")
-        newsletter = form.save(commit=False)
-        newsletter.author = self.request.user
-        newsletter.save()
-        form.save_m2m()
-        print("Newsletter created successfully with ID:", newsletter.id)
-        return super().form_valid(form)
-
-
-class NewsletterUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    model = Newsletter
-    form_class = NewsletterForm
-    template_name = 'news/newsletter_update.html'
-    success_url = reverse_lazy('editor-newsletter-list')
-
-    def test_func(self):
-        newsletter = self.get_object()
-        return (
-            self.request.user.groups.filter(name='Editor').exists() or
-            newsletter.author == self.request.user
-        )
-
-    def form_invalid(self, form):
-        print("=== UPDATE FORM INVALID ===")
-        print("Errors:", form.errors)
-        print("Cleaned Data:", form.cleaned_data)
-        return super().form_invalid(form)
-
-    def form_valid(self, form):
-        print("=== UPDATE FORM VALID - SAVING ===")
-        newsletter = form.save(commit=False)
-        newsletter.author = self.get_object().author
-        newsletter.save()
-        form.save_m2m()
-        print("Newsletter updated successfully with ID:", newsletter.id)
-        return super().form_valid(form)"""
 
 
 class ArticleDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
@@ -240,16 +194,24 @@ class ArticleDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     success_url = reverse_lazy('home')
 
     def test_func(self):
-        return self.request.user.groups.filter(name='Editor').exists()
+        article = self.get_object()
+        return (
+            self.request.user.groups.filter(name='Editor').exists() or
+            article.author == self.request.user
+        )
 
 
 class NewsletterDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
-    model = Newsletter
-    template_name = 'news/newsletter_confirm_delete.html'
-    success_url = reverse_lazy('newsletter_list')
+    model = Article
+    template_name = 'news/article_confirm_delete.html'
+    success_url = reverse_lazy('home')
 
     def test_func(self):
-        return self.request.user.groups.filter(name='Editor').exists()
+        article = self.get_object()
+        return (
+            self.request.user.groups.filter(name='Editor').exists() or
+            article.author == self.request.user
+        )
 
 
 # REST API
@@ -300,3 +262,54 @@ class NewsletterViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
+
+class PublisherListView(ListView):
+    model = Publisher
+    template_name = 'news/publisher_list.html'
+    context_object_name = 'publishers'
+    ordering = ['name']
+
+
+class PublisherCreateView(LoginRequiredMixin, EditorRequiredMixin, CreateView):
+    model = Publisher
+    fields = ['name', 'description']
+    template_name = 'news/publisher_form.html'
+    success_url = reverse_lazy('publisher-list')
+
+    def form_valid(self, form):
+        messages.success(self.request, "Publisher created successfully!")
+        return super().form_valid(form)
+
+
+@login_required
+def subscribe_publisher(request, pk):
+    publisher = get_object_or_404(Publisher, pk=pk)
+    request.user.subscriptions_publishers.add(publisher)
+    messages.success(request, f"Subscribed to {publisher.name}")
+    return redirect('publisher-list')
+
+
+@login_required
+def unsubscribe_publisher(request, pk):
+    publisher = get_object_or_404(Publisher, pk=pk)
+    request.user.subscriptions_publishers.remove(publisher)
+    messages.success(request, f"Unsubscribed from {publisher.name}")
+    return redirect('publisher-list')
+
+
+@login_required
+def subscribe_journalist(request, pk):
+    journalist = get_object_or_404(User, pk=pk, groups__name='Journalist')
+    request.user.subscriptions_journalists.add(journalist)
+    messages.success(
+        request, f"Subscribed to journalist: {journalist.username}")
+    return redirect('home')  # or a journalist profile page
+
+
+@login_required
+def unsubscribe_journalist(request, pk):
+    journalist = get_object_or_404(User, pk=pk, groups__name='Journalist')
+    request.user.subscriptions_journalists.remove(journalist)
+    messages.success(request, f"Unsubscribed from {journalist.username}")
+    return redirect('home')

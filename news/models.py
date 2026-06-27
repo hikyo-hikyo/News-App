@@ -19,19 +19,22 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)  # Unique email
 
     subscriptions_publishers = models.ManyToManyField(
-        'Publisher', blank=True, related_name='subscribers')
-
-    subscriptions_journalists = models.ManyToManyField('User', blank=True,
-                                                       related_name='journalist_subscribers',
-                                                       limit_choices_to={'groups__name': 'Journalist'})
+        'Publisher', blank=True, related_name='subscribers'
+    )
+    subscriptions_journalists = models.ManyToManyField(
+        'User', blank=True,
+        related_name='journalist_subscribers',
+        limit_choices_to={'groups__name': 'Journalist'}
+    )
 
     def __str__(self):
         return self.username
 
 
 class Publisher(models.Model):
-    name = models.CharField(max_length=20)
+    name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return self.name

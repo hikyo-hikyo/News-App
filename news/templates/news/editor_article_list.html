@@ -33,6 +33,9 @@
                 </td>
                 <td>{{ article.created_at|date:"M d, Y" }}</td>
                 <td>
+                    {% if not article.approved %}
+                        <a href="{% url 'approve-article' article.pk %}" class="btn btn-success">Approve</a>
+                    {% endif %}
                     <a href="{% url 'article-update' article.pk %}" class="btn btn-sm btn-warning">Edit</a>
                    
                     <a href="{% url 'article-delete' article.pk %}" class="btn btn-sm btn-danger">Delete</a>
