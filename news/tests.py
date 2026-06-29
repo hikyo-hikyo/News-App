@@ -10,31 +10,44 @@ from .models import Article, Publisher, User
 class NewsAppTests(APITestCase):
 
     def setUp(self):
+        # Create groups first
         self.reader_group = Group.objects.get_or_create(name='Reader')[0]
         self.journalist_group = Group.objects.get_or_create(name='Journalist')[
             0]
         self.editor_group = Group.objects.get_or_create(name='Editor')[0]
 
+        # Create users with unique emails
         self.reader = User.objects.create_user(
-            username='reader', password='pass123')
-        self.journalist = User.objects.create_user(
-            username='journalist', password='pass123')
-        self.editor = User.objects.create_user(
-            username='editor', password='pass123')
-
+            username='reader1',
+            email='reader1@test.com',
+            password='testpass123'
+        )
         self.reader.groups.add(self.reader_group)
+
+        self.journalist = User.objects.create_user(
+            username='journalist1',
+            email='journalist1@test.com',
+            password='testpass123'
+        )
         self.journalist.groups.add(self.journalist_group)
+
+        self.editor = User.objects.create_user(
+            username='editor1',
+            email='editor1@test.com',
+            password='testpass123'
+        )
         self.editor.groups.add(self.editor_group)
 
-        self.publisher = Publisher.objects.create(name="Tech Daily")
-        self.reader.subscriptions_publishers.add(self.publisher)
+        # Create a test publisher
+        self.publisher = Publisher.objects.create(name='Test Publisher')
 
+        # Create a test article (unapproved)
         self.article = Article.objects.create(
-            title="Test Article",
-            content="Content here...",
+            title='Test Article',
+            content='This is a test article content.',
             author=self.journalist,
             publisher=self.publisher,
-            approved=True
+            approved=False
         )
 
     def test_reader_can_access_subscribed_articles(self):

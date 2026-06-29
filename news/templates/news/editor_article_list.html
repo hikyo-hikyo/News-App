@@ -33,15 +33,21 @@
                     {% endif %}
                 </td>
                 <td>{{ article.created_at|date:"M d, Y" }}</td>
-                <td>
-                    <a href="{% url 'article-update' article.pk %}" class="btn btn-sm btn-warning">Edit</a>
-                   
-                    <a href="{% url 'article-delete' article.pk %}" class="btn btn-sm btn-danger">Delete</a>
-                    {% if not article.approved %}
-                        <a href="{% url 'approve-article' article.pk %}" class="btn btn-sm btn-success">Approve</a>
-                    {% endif %}
+              <td>
+                <a href="{% url 'article-update' article.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                
+                {% if article.author == request.user or is_editor %}
+                    <a href="{% url 'article-delete' article.pk %}" 
+                    class="btn btn-danger btn-sm"
+                    onclick="return confirm('Are you sure you want to delete this article?')">
+                        Delete
+                    </a>
+                {% endif %}
 
-                </td>
+                {% if not article.approved and is_editor %}
+                    <a href="{% url 'approve-article' article.pk %}" class="btn btn-sm btn-success">Approve</a>
+                {% endif %}
+            </td>
             </tr>
             {% endfor %}
         </tbody>

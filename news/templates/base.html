@@ -28,7 +28,15 @@
 
                     
                     {% if user.is_authenticated %}
-                         {% if user|has_group:"Journalist"%}
+                     {% if user|has_group:"Reader" %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'publisher-list' %}">Publishers</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'journalist-list' %}">Journalists</a>
+                            </li>
+                        {% endif %}
+                        {% if user|has_group:"Journalist"%}
                             <li class="nav-item"><a class="nav-link" href="{% url 'article-create' %}">Create Article</a></li>
                             <li class="nav-item"><a class="nav-link" href="{% url 'newsletter-create' %}">Create Newsletter</a></li>
                             <li class="nav-item"><a class="nav-link" href="{% url 'editor-article-list' %}">Manage Articles</a></li>

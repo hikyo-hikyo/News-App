@@ -11,6 +11,7 @@ class NewsConfig(AppConfig):
         from django.db.models.signals import post_migrate
 
         post_migrate.connect(create_default_groups, sender=self)
+        from . import signals
 
 
 def create_default_groups(sender, **kwargs):

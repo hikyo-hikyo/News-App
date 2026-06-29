@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Subscribe to Journalists{% endblock %}
+
+{% block content %}
+<h2>Independent Journalists</h2>
+
+<ul>
+    {% for journalist in journalists %}
+    <li>
+        <strong>{{ journalist.username }}</strong>
+        {% if journalist in request.user.subscriptions_journalists.all %}
+            <a href="{% url 'unsubscribe-journalist' journalist.pk %}">Unsubscribe</a>
+        {% else %}
+            <a href="{% url 'subscribe-journalist' journalist.pk %}">Subscribe</a>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}

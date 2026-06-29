@@ -1,4 +1,5 @@
 
+from django.views.generic.edit import FormView
 from django.views.generic import (
     ListView, UpdateView, DetailView, CreateView, DeleteView
 )
@@ -11,7 +12,7 @@ from rest_framework import viewsets, permissions
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from .models import Article, Newsletter, Publisher, User
-from .forms import CustomUserCreationForm, ArticleForm, NewsletterForm
+from .forms import CustomUserCreationForm, ArticleForm, NewsletterForm, PublisherSubscriptionForm, JournalistSubscriptionForm
 from .serializers import ArticleSerializer, NewsletterSerializer
 from .permissions import IsJournalist, IsEditor, IsEditorOrJournalist
 from django.contrib.auth import login
@@ -19,7 +20,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView, CreateView
 from .models import Publisher
-
+from django.views.generic.edit import FormView
 #  REGISTER
 
 
@@ -85,8 +86,13 @@ class EditorArticleListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
         return self.request.user.groups.filter(name__in=['Editor', 'Journalist']).exists()
 
     def get_queryset(self):
-        # Show ALL articles (including unapproved)
         return Article.objects.all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_editor'] = self.request.user.groups.filter(
+            name='Editor').exists()
+        return context
 
 
 class EditorNewsletterListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
@@ -98,15 +104,11 @@ class EditorNewsletterListView(LoginRequiredMixin, UserPassesTestMixin, ListView
     def test_func(self):
         return self.request.user.groups.filter(name__in=['Editor', 'Journalist']).exists()
 
-
-class ArticleListView(ListView):
-    model = Article
-    template_name = 'news/article_list.html'
-    context_object_name = 'articles'
-    ordering = ['-created_at']
-
-    def get_queryset(self):
-        return Article.objects.filter(approved=True)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_editor'] = self.request.user.groups.filter(
+            name='Editor').exists()
+        return context
 
 
 class ArticleDetailView(DetailView):
@@ -191,30 +193,79 @@ class NewsletterUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 class ArticleDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Article
     template_name = 'news/article_confirm_delete.html'
-    success_url = reverse_lazy('home')
+    success_url = reverse_lazy('editor-article-list')
 
     def test_func(self):
         article = self.get_object()
-        return (
-            self.request.user.groups.filter(name='Editor').exists() or
-            article.author == self.request.user
+        user = self.request.user
+
+        is_editor = user.groups.filter(name='Editor').exists()
+        is_owner = article.author == user
+
+        return is_editor or is_owner
+
+    def handle_no_permission(self):
+        """This runs when test_func returns False"""
+        messages.error(
+            self.request,
+            "You cannot delete an article that is not yours."
         )
+        return redirect('editor-article-list')
 
 
 class NewsletterDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
-    model = Article
-    template_name = 'news/article_confirm_delete.html'
-    success_url = reverse_lazy('home')
+    model = Newsletter
+    template_name = 'news/newsletter_confirm_delete.html'
+    success_url = reverse_lazy('editor-newsletter-list')
 
     def test_func(self):
-        article = self.get_object()
+        newsletter = self.get_object()
+        user = self.request.user
         return (
-            self.request.user.groups.filter(name='Editor').exists() or
-            article.author == self.request.user
+            user.groups.filter(name='Editor').exists() or
+            newsletter.author == user
         )
 
+    def handle_no_permission(self):
+        messages.error(
+            self.request, "You cannot delete a newsletter that is not yours.")
+        return redirect('editor-newsletter-list')
 
 # REST API
+
+
+class ArticleListView(ListView):
+    model = Article
+    template_name = 'news/article_list.html'
+    context_object_name = 'articles'
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        queryset = Article.objects.filter(approved=True)
+
+        user = self.request.user
+        if user.is_authenticated and user.groups.filter(name='Reader').exists():
+            subscribed_publishers = user.subscriptions_publishers.all()
+            subscribed_journalists = user.subscriptions_journalists.all()
+
+            if subscribed_publishers.exists() or subscribed_journalists.exists():
+                # Show subscribed articles FIRST, then others
+                subscribed_articles = queryset.filter(
+                    Q(publisher__in=subscribed_publishers) |
+                    Q(author__in=subscribed_journalists)
+                )
+
+                other_articles = queryset.exclude(
+                    Q(publisher__in=subscribed_publishers) |
+                    Q(author__in=subscribed_journalists)
+                )
+
+                # Combine: subscribed first, then others
+                return subscribed_articles | other_articles
+
+        return queryset
+
+
 class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
     serializer_class = ArticleSerializer
@@ -313,3 +364,80 @@ def unsubscribe_journalist(request, pk):
     request.user.subscriptions_journalists.remove(journalist)
     messages.success(request, f"Unsubscribed from {journalist.username}")
     return redirect('home')
+
+# Subscription
+
+
+class PublisherSubscriptionView(LoginRequiredMixin, FormView):
+    template_name = 'news/subscribe_publishers.html'
+    form_class = PublisherSubscriptionForm
+    success_url = reverse_lazy('home')
+
+    def form_valid(self, form):
+        self.request.user.subscriptions_publishers.set(
+            form.cleaned_data['publishers'])
+        messages.success(self.request, "Publisher subscriptions updated!")
+        return super().form_valid(form)
+
+
+class JournalistSubscriptionView(LoginRequiredMixin, FormView):
+    template_name = 'news/subscribe_journalists.html'
+    form_class = JournalistSubscriptionForm
+    success_url = reverse_lazy('home')
+
+    def form_valid(self, form):
+        self.request.user.subscriptions_journalists.set(
+            form.cleaned_data['journalists'])
+        messages.success(self.request, "Journalist subscriptions updated!")
+        return super().form_valid(form)
+
+
+class PublisherListView(ListView):
+    model = Publisher
+    template_name = 'news/publisher_list.html'
+    context_object_name = 'publishers'
+    ordering = ['name']
+
+
+class JournalistListView(ListView):
+    model = User
+    template_name = 'news/journalist_list.html'
+    context_object_name = 'journalists'
+    ordering = ['username']
+
+    def get_queryset(self):
+        return User.objects.filter(groups__name='Journalist')
+
+
+# Subscription actions
+@login_required
+def subscribe_publisher(request, pk):
+    publisher = get_object_or_404(Publisher, pk=pk)
+    request.user.subscriptions_publishers.add(publisher)
+    messages.success(request, f"Subscribed to {publisher.name}")
+    return redirect('publisher-list')
+
+
+@login_required
+def unsubscribe_publisher(request, pk):
+    publisher = get_object_or_404(Publisher, pk=pk)
+    request.user.subscriptions_publishers.remove(publisher)
+    messages.success(request, f"Unsubscribed from {publisher.name}")
+    return redirect('publisher-list')
+
+
+@login_required
+def subscribe_journalist(request, pk):
+    journalist = get_object_or_404(User, pk=pk, groups__name='Journalist')
+    request.user.subscriptions_journalists.add(journalist)
+    messages.success(
+        request, f"Subscribed to journalist: {journalist.username}")
+    return redirect('journalist-list')
+
+
+@login_required
+def unsubscribe_journalist(request, pk):
+    journalist = get_object_or_404(User, pk=pk, groups__name='Journalist')
+    request.user.subscriptions_journalists.remove(journalist)
+    messages.success(request, f"Unsubscribed from {journalist.username}")
+    return redirect('journalist-list')
