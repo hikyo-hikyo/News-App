@@ -3,18 +3,35 @@
 {% block title %}Subscribe to Journalists{% endblock %}
 
 {% block content %}
-<h2>Independent Journalists</h2>
+<div class="container mt-5">
+    <h2 class="mb-4">Independent Journalists</h2>
 
-<ul>
-    {% for journalist in journalists %}
-    <li>
-        <strong>{{ journalist.username }}</strong>
-        {% if journalist in request.user.subscriptions_journalists.all %}
-            <a href="{% url 'unsubscribe-journalist' journalist.pk %}">Unsubscribe</a>
-        {% else %}
-            <a href="{% url 'subscribe-journalist' journalist.pk %}">Subscribe</a>
-        {% endif %}
-    </li>
-    {% endfor %}
-</ul>
+    <div class="row">
+        {% for journalist in journalists %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title">{{ journalist.username }}</h5>
+                    <p class="text-muted">Independent Journalist</p>
+                </div>
+                <div class="card-footer">
+                    {% if journalist in request.user.subscriptions_journalists.all %}
+                        <a href="{% url 'unsubscribe-journalist' journalist.pk %}" 
+                           class="btn btn-outline-danger w-100">
+                            Unsubscribe
+                        </a>
+                    {% else %}
+                        <a href="{% url 'subscribe-journalist' journalist.pk %}" 
+                           class="btn btn-primary w-100">
+                            Subscribe
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-muted">No independent journalists available yet.</p>
+        {% endfor %}
+    </div>
+</div>
 {% endblock %}

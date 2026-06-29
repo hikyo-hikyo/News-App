@@ -16,7 +16,7 @@
             <ul class="list-group">
                 {% for article in newsletter.articles.all %}
                 <li class="list-group-item">
-                    <a href="{% url 'frontend-article-detail' article.pk %}">
+                    <a href="{% url 'article-detail' article.pk %}">
                         {{ article.title }}
                     </a>
                     <small class="text-muted"> - {{ article.created_at|date:"M d" }}</small>
