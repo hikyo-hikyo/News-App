@@ -19,8 +19,8 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView, CreateView
-from .models import Publisher
 from django.views.generic.edit import FormView
+from .mixins import ReaderRequiredMixin
 #  REGISTER
 
 
@@ -99,16 +99,17 @@ class EditorNewsletterListView(LoginRequiredMixin, UserPassesTestMixin, ListView
     model = Newsletter
     template_name = 'news/editor_newsletter_list.html'
     context_object_name = 'newsletters'
-    ordering = ['-created_at']
 
     def test_func(self):
         return self.request.user.groups.filter(name__in=['Editor', 'Journalist']).exists()
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['is_editor'] = self.request.user.groups.filter(
-            name='Editor').exists()
-        return context
+    def get_queryset(self):
+        user = self.request.user
+        if user.groups.filter(name='Editor').exists():
+            return Newsletter.objects.all()  # Editors see all
+        else:
+            # Journalists can only see their own
+            return Newsletter.objects.filter(author=user)
 
 
 class ArticleDetailView(DetailView):
@@ -280,8 +281,11 @@ class ArticleViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
-        queryset = Article.objects.filter(approved=True)
+        queryset = Article.objects.all()
         user = self.request.user
+        # Filter for Readers to only see approved articles
+        if self.request.user.groups.filter(name='Reader').exists():
+            queryset = queryset.filter(approved=True)
 
         if self.action == 'subscribed' and user.is_authenticated:
             subscribed_publishers = user.subscriptions_publishers.all()
@@ -290,6 +294,7 @@ class ArticleViewSet(viewsets.ModelViewSet):
                 Q(publisher__in=subscribed_publishers) |
                 Q(author__in=subscribed_journalists)
             )
+
         return queryset
 
     @action(detail=False, methods=['get'], url_path='subscribed')
@@ -392,14 +397,14 @@ class JournalistSubscriptionView(LoginRequiredMixin, FormView):
         return super().form_valid(form)
 
 
-class PublisherListView(ListView):
+class PublisherListView(ReaderRequiredMixin, ListView):
     model = Publisher
     template_name = 'news/publisher_list.html'
     context_object_name = 'publishers'
     ordering = ['name']
 
 
-class JournalistListView(ListView):
+class JournalistListView(ReaderRequiredMixin, ListView):
     model = User
     template_name = 'news/journalist_list.html'
     context_object_name = 'journalists'

@@ -26,8 +26,8 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register(r'articles', ArticleViewSet, basename='article')
-router.register(r'newsletters', NewsletterViewSet, basename='newsletter')
+router.register(r'articles', ArticleViewSet, basename='api-article')
+router.register(r'newsletters', NewsletterViewSet, basename='api-newsletter')
 
 urlpatterns = [
     # Home & Main Pages
@@ -56,7 +56,8 @@ urlpatterns = [
     path('newsletter/<int:pk>/update/',
          NewsletterUpdateView.as_view(), name='newsletter-update'),
     path('newsletter/<int:pk>/delete/',
-         NewsletterDeleteView.as_view(), name='newsletter-delete'),
+         NewsletterDeleteView.as_view(),
+         name='newsletter-delete'),
 
     # Approve Article
     path('approve/<int:pk>/', ApproveArticleView.as_view(), name='approve-article'),

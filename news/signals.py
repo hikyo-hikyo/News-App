@@ -7,52 +7,30 @@ from .models import Article
 
 @receiver(post_save, sender=Article)
 def handle_article_approval(sender, instance, created, **kwargs):
-    if instance.approved and not created:  # Only on update
+    """Handle email + webhook only when article is approved (not on create)"""
+    if instance.approved and not created:   # Only on update to approved
         # Email subscribers
         if instance.publisher:
             subscribers = instance.publisher.subscribers.all()
         else:
             subscribers = instance.author.journalist_subscribers.all()
 
-        for subscriber in subscribers:
+        for sub in subscribers:
             send_mail(
-                subject=f"New Article Approved: {instance.title}",
-                message=instance.content[:500] +
-                "\n\nRead full article on NewsApp.",
+                subject=f"New Article: {instance.title}",
+                message=instance.content[:500] + "\n\nRead more on NewsApp.",
                 from_email='no-reply@newsapp.com',
-                recipient_list=[subscriber.email],
+                recipient_list=[sub.email],
                 fail_silently=True,
             )
 
-        # Simulate external API call
+        # External webhook simulation
         try:
             requests.post('http://127.0.0.1:8000/api/approved/',
                           json={'article_id': instance.id,
-                                'title': instance.title},
+                                'title': instance.title,
+                                'author': instance.author.username,
+                                },
                           timeout=5)
         except:
-            pass  # Don't break if localhost fails in production
-
-
-@receiver(post_save, sender=Article)
-def notify_subscribers_on_approval(sender, instance, **kwargs):
-    # only on update to approved
-    if instance.approved and kwargs.get('created', False) is False:
-        # Notify publisher subscribers
-        if instance.publisher:
-            for reader in instance.publisher.subscribers.all():
-                send_mail(
-                    subject=f"New Article from {instance.publisher.name}",
-                    message=f"{instance.title}\n\n{instance.content[:500]}...",
-                    from_email='no-reply@newsapp.com',
-                    recipient_list=[reader.email],
-                )
-
-        # Notify journalist subscribers
-        for reader in instance.author.journalist_subscribers.all():
-            send_mail(
-                subject=f"New Article by {instance.author.username}",
-                message=f"{instance.title}\n\n{instance.content[:500]}...",
-                from_email='no-reply@newsapp.com',
-                recipient_list=[reader.email],
-            )
+            pass

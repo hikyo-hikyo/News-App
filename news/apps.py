@@ -7,11 +7,13 @@ class NewsConfig(AppConfig):
     verbose_name = 'News App'
 
     def ready(self):
+
+        from . import signals as _   # noqa: F401
+        # This suppresses the greyed-out warning
+
         # Import inside ready() to avoid AppRegistryNotReady error
         from django.db.models.signals import post_migrate
-
         post_migrate.connect(create_default_groups, sender=self)
-        from . import signals
 
 
 def create_default_groups(sender, **kwargs):
