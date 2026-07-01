@@ -12,12 +12,10 @@ documentation for details.
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
+   newsapp
+   news
    modules
-   newsapp.asgi
-   newsapp.settings
-   newsapp.urls
-   newsapp.wsgi
-
+   
